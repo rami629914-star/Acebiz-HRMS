@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}My Leaves - Leave Management System{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-list"></i> My Leave Applications</h1>
+        <a href="{{ url_for('apply_leave') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Apply New Leave
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if leaves %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Applied On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>
+                                <span class="leave-type {{ leave.leave_type }}">
+                                    {{ leave.leave_type|capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ leave.start_date.strftime('%d %b, %Y') }}</td>
+                            <td>{{ leave.end_date.strftime('%d %b, %Y') }}</td>
+                            <td>{{ (leave.end_date - leave.start_date).days + 1 }}</td>
+                            <td class="reason-cell">
+                                <span class="reason-text" title="{{ leave.reason }}">
+                                    {{ leave.reason[:50] }}{% if leave.reason|length > 50 %}...{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge {{ leave.status }}">
+                                    {% if leave.revocation_requested %}
+                                        Revocation Pending
+                                    {% else %}
+                                        {{ leave.status|capitalize }}
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>{{ leave.applied_on.strftime('%d %b, %Y') }}</td>
+                            <td>
+                                {% if leave.status == 'pending' %}
+                                <form method="POST" action="{{ url_for('cancel_leave', leave_id=leave.id) }}" class="inline-form">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel this leave application?')">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </form>
+                                {% elif leave.status == 'approved' and not leave.revocation_requested %}
+                                <button class="btn btn-warning btn-sm" onclick="showRevocationModal({{ leave.id }})">
+                                    <i class="fas fa-undo"></i> Request Revoke
+                                </button>
+                                {% elif leave.revocation_requested %}
+                                <span class="text-warning"><i class="fas fa-clock"></i> Awaiting Approval</span>
+                                {% elif leave.comments %}
+                                <button class="btn btn-outline btn-sm" onclick="showComments('{{ leave.comments }}')">
+                                    <i class="fas fa-comment"></i> View Comment
+                                </button>
+                                {% else %}
+                                <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h3>No Leave Applications</h3>
+                <p>You haven't applied for any leaves yet.</p>
+                <a href="{{ url_for('apply_leave') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Apply for Leave
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Comments Modal -->
+<div id="commentsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-comment"></i> Manager's Comment</h3>
+            <button class="close-modal" onclick="closeModal('commentsModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p id="commentText"></p>
+        </div>
+    </div>
+</div>
+
+<!-- Revocation Request Modal -->
+<div id="revocationModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-undo"></i> Request Leave Revocation</h3>
+            <button class="close-modal" onclick="closeModal('revocationModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="revocationForm" method="POST">
+                <div class="form-group">
+                    <label for="revocation_reason">
+                        <i class="fas fa-comment-alt"></i> Reason for Revocation
+                    </label>
+                    <textarea id="revocation_reason" name="revocation_reason" rows="3" required
+                              placeholder="Please explain why you want to revoke this leave..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('revocationModal')">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-paper-plane"></i> Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function showComments(comment) {
+        document.getElementById('commentText').textContent = comment;
+        document.getElementById('commentsModal').classList.add('show');
+    }
+
+    function showRevocationModal(leaveId) {
+        document.getElementById('revocationForm').action = '/leave/' + leaveId + '/request-revocation';
+        document.getElementById('revocationModal').classList.add('show');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('show');
+    }
+
+    // Close modal on outside click
+    document.querySelectorAll('.modal').forEach(function(modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('show');
+            }
+        });
+    });
+</script>
+{% endblock %}

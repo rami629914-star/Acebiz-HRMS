@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP - Leave Management System{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <i class="fas fa-shield-alt logo-icon"></i>
+            <h1>Verify OTP</h1>
+            <p>Enter the 6-digit OTP sent to<br><strong>{{ email }}</strong></p>
+        </div>
+
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="otp">
+                    <i class="fas fa-key"></i> Enter OTP
+                </label>
+                <input type="text" id="otp" name="otp" required
+                       placeholder="Enter 6-digit OTP"
+                       maxlength="6"
+                       pattern="[0-9]{6}"
+                       style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem;">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+                <i class="fas fa-check-circle"></i> Verify OTP
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Didn't receive the OTP?</p>
+            <form method="POST" action="{{ url_for('resend_otp') }}" style="display: inline;">
+                <button type="submit" class="btn btn-outline btn-sm">
+                    <i class="fas fa-redo"></i> Resend OTP
+                </button>
+            </form>
+            <p style="margin-top: 1rem;">
+                <a href="{{ url_for('forgot_password') }}">Use a different email</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

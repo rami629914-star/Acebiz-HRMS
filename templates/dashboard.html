@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Leave Management System{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="page-header">
+        <h1><i class="fas fa-home"></i> Dashboard</h1>
+        <p>Welcome back, {{ current_user.username }}!</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card annual">
+            <div class="stat-icon">
+                <i class="fas fa-umbrella-beach"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Annual Leave</h3>
+                {% if leave_info %}
+                <p class="stat-number">{{ leave_info.annual_available }}</p>
+                <span class="stat-label">of {{ leave_info.annual_accrued }} accrued days</span>
+                {% else %}
+                <p class="stat-number">--</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="stat-card sick">
+            <div class="stat-icon">
+                <i class="fas fa-briefcase-medical"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Sick Leave</h3>
+                {% if leave_info %}
+                <p class="stat-number">{{ leave_info.sick_available }}</p>
+                <span class="stat-label">of {{ leave_info.sick_accrued }} accrued days</span>
+                {% else %}
+                <p class="stat-number">--</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if current_user.role in ['admin', 'manager'] %}
+        <div class="stat-card pending">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Pending Requests</h3>
+                <p class="stat-number">{{ pending_count }}</p>
+                <span class="stat-label">awaiting approval</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-history"></i> Recent Leave Applications</h2>
+                <a href="{{ url_for('my_leaves') }}" class="btn btn-outline btn-sm">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_leaves %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Applied On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in recent_leaves %}
+                        <tr>
+                            <td>
+                                <span class="leave-type {{ leave.leave_type }}">
+                                    {{ leave.leave_type|capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ leave.start_date.strftime('%d %b') }} - {{ leave.end_date.strftime('%d %b, %Y') }}</td>
+                            <td>
+                                <span class="status-badge {{ leave.status }}">
+                                    {{ leave.status|capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ leave.applied_on.strftime('%d %b, %Y') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No leave applications yet</p>
+                    <a href="{{ url_for('apply_leave') }}" class="btn btn-primary">Apply for Leave</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
+            </div>
+            <div class="card-body">
+                <div class="quick-actions">
+                    <a href="{{ url_for('apply_leave') }}" class="quick-action-btn">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>Apply Leave</span>
+                    </a>
+                    <a href="{{ url_for('my_leaves') }}" class="quick-action-btn">
+                        <i class="fas fa-list-alt"></i>
+                        <span>My Leaves</span>
+                    </a>
+                    <a href="{{ url_for('leave_balance') }}" class="quick-action-btn">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>View Balance</span>
+                    </a>
+                    {% if current_user.role in ['admin', 'manager'] %}
+                    <a href="{{ url_for('manage_leaves') }}" class="quick-action-btn">
+                        <i class="fas fa-tasks"></i>
+                        <span>Manage Requests</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

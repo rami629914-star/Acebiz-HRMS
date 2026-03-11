@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Leave Balance - Leave Management System{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-pie"></i> Leave Balance</h1>
+        <p>Your leave allocation for {{ balance.year if balance else 'current year' }}</p>
+    </div>
+
+    {% if leave_info %}
+    <div class="balance-grid">
+        <div class="balance-card annual">
+            <div class="balance-header">
+                <i class="fas fa-umbrella-beach"></i>
+                <h3>Annual Leave</h3>
+            </div>
+            <div class="balance-body">
+                <div class="balance-circle">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <path class="circle" stroke-dasharray="{{ ((leave_info.annual_available / leave_info.annual_accrued * 100) if leave_info.annual_accrued > 0 else 0)|round }}, 100"
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    </svg>
+                    <div class="balance-number">{{ leave_info.annual_available }}</div>
+                </div>
+                <div class="balance-details">
+                    <div class="detail-row">
+                        <span>Accrued (Month {{ current_month }})</span>
+                        <span>{{ leave_info.annual_accrued }} days</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Used</span>
+                        <span>{{ leave_info.annual_used }} days</span>
+                    </div>
+                    <div class="detail-row highlight">
+                        <span>Available</span>
+                        <span>{{ leave_info.annual_available }} days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="balance-card sick">
+            <div class="balance-header">
+                <i class="fas fa-briefcase-medical"></i>
+                <h3>Sick Leave</h3>
+            </div>
+            <div class="balance-body">
+                <div class="balance-circle">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                        <path class="circle" stroke-dasharray="{{ ((leave_info.sick_available / leave_info.sick_accrued * 100) if leave_info.sick_accrued > 0 else 0)|round }}, 100"
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                    </svg>
+                    <div class="balance-number">{{ leave_info.sick_available }}</div>
+                </div>
+                <div class="balance-details">
+                    <div class="detail-row">
+                        <span>Accrued (Month {{ current_month }})</span>
+                        <span>{{ leave_info.sick_accrued }} days</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Used</span>
+                        <span>{{ leave_info.sick_used }} days</span>
+                    </div>
+                    <div class="detail-row highlight">
+                        <span>Available</span>
+                        <span>{{ leave_info.sick_available }} days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h2><i class="fas fa-info-circle"></i> Leave Policy</h2>
+        </div>
+        <div class="card-body">
+            <div class="policy-grid">
+                <div class="policy-item">
+                    <h4><i class="fas fa-umbrella-beach"></i> Annual Leave</h4>
+                    <p>1.25 days credited on the 1st of each month (15 days/year) for planned vacations and extended time off.</p>
+                </div>
+                <div class="policy-item">
+                    <h4><i class="fas fa-briefcase-medical"></i> Sick Leave</h4>
+                    <p>1 day credited on the 1st of each month (12 days/year) for medical emergencies and health-related absences.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <h3>No Balance Record</h3>
+                <p>Leave balance record not found. Please contact HR.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

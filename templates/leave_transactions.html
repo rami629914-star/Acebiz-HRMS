@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Leave Transactions - Leave Management System{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-exchange-alt"></i> Leave Transactions</h1>
+        <p>View your leave credit and debit history</p>
+    </div>
+
+    <!-- Leave Type Tabs -->
+    <div class="tabs-container">
+        <div class="tabs">
+            <a href="{{ url_for('leave_transactions', type='annual', year=year) }}"
+               class="tab {% if leave_type == 'annual' %}active{% endif %}">
+                <i class="fas fa-umbrella-beach"></i> Annual Leave
+            </a>
+            <a href="{{ url_for('leave_transactions', type='sick', year=year) }}"
+               class="tab {% if leave_type == 'sick' %}active{% endif %}">
+                <i class="fas fa-briefcase-medical"></i> Sick Leave
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="summary-cards">
+        <div class="summary-card {% if leave_type == 'annual' %}annual{% else %}sick{% endif %}">
+            <div class="summary-icon">
+                <i class="fas {% if leave_type == 'annual' %}fa-umbrella-beach{% else %}fa-briefcase-medical{% endif %}"></i>
+            </div>
+            <div class="summary-info">
+                <h3>{{ leave_type|capitalize }} Leave Summary</h3>
+                {% if leave_info %}
+                <div class="summary-stats">
+                    <div class="stat">
+                        <span class="stat-value">
+                            {% if leave_type == 'annual' %}{{ leave_info.annual_accrued }}{% else %}{{ leave_info.sick_accrued }}{% endif %}
+                        </span>
+                        <span class="stat-label">Total Credited</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value text-danger">
+                            {% if leave_type == 'annual' %}{{ leave_info.annual_used }}{% else %}{{ leave_info.sick_used }}{% endif %}
+                        </span>
+                        <span class="stat-label">Used</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value text-success">
+                            {% if leave_type == 'annual' %}{{ leave_info.annual_available }}{% else %}{{ leave_info.sick_available }}{% endif %}
+                        </span>
+                        <span class="stat-label">Available</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2><i class="fas fa-history"></i> Transaction History - {{ year }}</h2>
+            <div class="year-filter">
+                <select onchange="window.location.href='{{ url_for('leave_transactions', type=leave_type) }}&year=' + this.value">
+                    {% for y in range(current_year, current_year - 3, -1) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if transactions %}
+            <div class="table-responsive">
+                <table class="table transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Days</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in transactions %}
+                        <tr class="transaction-row {{ txn.type }}">
+                            <td>
+                                <span class="transaction-date">{{ txn.date.strftime('%d %b, %Y') }}</span>
+                            </td>
+                            <td>
+                                <span class="transaction-description">{{ txn.description }}</span>
+                            </td>
+                            <td>
+                                <span class="transaction-type-badge {{ txn.type }}">
+                                    <i class="fas {% if txn.type == 'credit' %}fa-plus-circle{% else %}fa-minus-circle{% endif %}"></i>
+                                    {{ txn.type|capitalize }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="transaction-days {{ txn.type }}">
+                                    {% if txn.type == 'credit' %}+{% else %}-{% endif %}{{ txn.days }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="transaction-balance">{{ txn.balance }} days</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <h3>No Transactions</h3>
+                <p>No leave transactions found for this period.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

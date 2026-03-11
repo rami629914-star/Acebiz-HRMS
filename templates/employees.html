@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Employees - Leave Management System{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1><i class="fas fa-users"></i> Employee Management</h1>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                            {% if current_user.role == 'admin' %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="employee-info">
+                                    <i class="fas fa-user-circle"></i>
+                                    <span>{{ user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.department or 'N/A' }}</td>
+                            <td>
+                                <span class="role-badge {{ user.role }}">
+                                    {{ user.role|capitalize }}
+                                </span>
+                            </td>
+                            <td>{{ user.created_at.strftime('%d %b, %Y') }}</td>
+                            {% if current_user.role == 'admin' %}
+                            <td>
+                                {% if user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('update_role', user_id=user.id) }}" class="role-form">
+                                    <select name="role" class="role-select" onchange="this.form.submit()">
+                                        <option value="employee" {% if user.role == 'employee' %}selected{% endif %}>Employee</option>
+                                        <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>Manager</option>
+                                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                    </select>
+                                </form>
+                                {% else %}
+                                <span class="text-muted">Current User</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <h3>No Employees</h3>
+                <p>No employees registered in the system yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
