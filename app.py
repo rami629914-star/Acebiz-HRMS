@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import random
 import os
+import requests
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -157,6 +158,16 @@ def record_leave_transaction(user_id, leave_type, transaction_type, days, descri
     )
     db.session.add(transaction)
     return transaction
+
+def send_n8n_webhook(event, data):
+    """Send webhook to n8n for email notifications"""
+    webhook_url = os.environ.get('N8N_WEBHOOK_URL')
+    if webhook_url:
+        try:
+            payload = {"event": event, **data}
+            requests.post(webhook_url, json=payload, timeout=5)
+        except Exception:
+            pass
 
 def generate_otp():
     """Generate a 6-digit OTP"""
@@ -504,6 +515,18 @@ def apply_leave():
         db.session.add(leave)
         db.session.commit()
 
+        # Send n8n webhook for email notification
+        send_n8n_webhook('leave_applied', {
+            'employee_name': current_user.username,
+            'employee_email': current_user.email,
+            'leave_type': leave_type,
+            'start_date': str(start_date),
+            'end_date': str(end_date),
+            'days': days,
+            'reason': reason,
+            'department': current_user.department
+        })
+
         flash('Leave application submitted successfully!', 'success')
         return redirect(url_for('my_leaves'))
 
@@ -568,6 +591,19 @@ def approve_leave(leave_id):
         )
 
     db.session.commit()
+
+    # Notify employee via n8n
+    employee = User.query.get(leave.user_id)
+    send_n8n_webhook('leave_approved', {
+        'employee_name': employee.username,
+        'employee_email': employee.email,
+        'leave_type': leave.leave_type,
+        'start_date': str(leave.start_date),
+        'end_date': str(leave.end_date),
+        'days': days,
+        'approved_by': current_user.username
+    })
+
     flash('Leave approved successfully!', 'success')
     return redirect(url_for('manage_leaves'))
 
@@ -584,6 +620,19 @@ def reject_leave(leave_id):
     leave.comments = comments
 
     db.session.commit()
+
+    # Notify employee via n8n
+    employee = User.query.get(leave.user_id)
+    send_n8n_webhook('leave_rejected', {
+        'employee_name': employee.username,
+        'employee_email': employee.email,
+        'leave_type': leave.leave_type,
+        'start_date': str(leave.start_date),
+        'end_date': str(leave.end_date),
+        'reason': comments,
+        'rejected_by': current_user.username
+    })
+
     flash('Leave rejected.', 'info')
     return redirect(url_for('manage_leaves'))
 
