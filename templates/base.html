@@ -12,7 +12,7 @@
     {% if current_user.is_authenticated %}
     <nav class="navbar">
         <div class="nav-brand">
-            <i class="fas fa-calendar-check"></i>
+            <img src="{{ url_for('static', filename='images/acebiz-logo.png') }}" alt="Acebiz" class="nav-logo" style="height: 35px; margin-right: 8px;">
             <span>Leave Portal</span>
         </div>
         <ul class="nav-links">
