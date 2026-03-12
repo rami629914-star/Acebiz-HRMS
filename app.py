@@ -29,8 +29,13 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 IS_VERCEL = os.environ.get('VERCEL', False)
 
 if DATABASE_URL:
+    # Clean up connection string
     if DATABASE_URL.startswith('postgres://'):
-        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql+pg8000://', 1)
+    elif DATABASE_URL.startswith('postgresql://'):
+        DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+pg8000://', 1)
+    # Remove channel_binding parameter (not supported by pg8000)
+    DATABASE_URL = DATABASE_URL.replace('&channel_binding=require', '')
     DB_URI = DATABASE_URL
 elif IS_VERCEL:
     DB_URI = 'sqlite:////tmp/leave_management.db'
@@ -893,6 +898,17 @@ def leave_stats():
 def init_db():
     with app.app_context():
         db.create_all()
+
+        # Add lwp_used column if it doesn't exist (migration for existing databases)
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('leave_balance')]
+            if 'lwp_used' not in columns:
+                db.session.execute(text('ALTER TABLE leave_balance ADD COLUMN lwp_used FLOAT DEFAULT 0'))
+                db.session.commit()
+        except Exception:
+            pass
 
         # Create default admin user if not exists
         admin = User.query.filter_by(username='admin').first()
