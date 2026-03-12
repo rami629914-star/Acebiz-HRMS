@@ -66,7 +66,7 @@ class User(UserMixin, db.Model):
 class Leave(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    leave_type = db.Column(db.String(50), nullable=False)  # sick, annual
+    leave_type = db.Column(db.String(50), nullable=False)  # sick, annual, lwp
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text, nullable=False)
@@ -91,6 +91,7 @@ class LeaveBalance(db.Model):
     year = db.Column(db.Integer, nullable=False)
     sick_leave_used = db.Column(db.Float, default=0)
     annual_leave_used = db.Column(db.Float, default=0)
+    lwp_used = db.Column(db.Float, default=0)
 
     def get_available_leave(self):
         """Calculate available leave based on monthly accrual"""
@@ -101,7 +102,8 @@ class LeaveBalance(db.Model):
             'annual_available': round(accrued['annual'] - self.annual_leave_used, 2),
             'sick_available': round(accrued['sick'] - self.sick_leave_used, 2),
             'annual_used': self.annual_leave_used,
-            'sick_used': self.sick_leave_used
+            'sick_used': self.sick_leave_used,
+            'lwp_used': self.lwp_used
         }
 
 class PasswordResetOTP(db.Model):
@@ -141,8 +143,12 @@ def record_leave_transaction(user_id, leave_type, transaction_type, days, descri
         leave_info = balance.get_available_leave()
         if leave_type == 'annual':
             balance_after = leave_info['annual_available']
-        else:
+        elif leave_type == 'sick':
             balance_after = leave_info['sick_available']
+        elif leave_type == 'lwp':
+            balance_after = leave_info['lwp_used']
+        else:
+            balance_after = 0
     else:
         balance_after = 0
 
@@ -493,7 +499,8 @@ def apply_leave():
             year=datetime.now().year
         ).first()
 
-        if balance:
+        # LWP has no balance limit, skip check for it
+        if leave_type in ['sick', 'annual'] and balance:
             leave_info = balance.get_available_leave()
             available = 0
             if leave_type == 'sick':
@@ -501,7 +508,7 @@ def apply_leave():
             elif leave_type == 'annual':
                 available = leave_info['annual_available']
 
-            if leave_type in ['sick', 'annual'] and days > available:
+            if days > available:
                 flash(f'Insufficient leave balance. Available: {available} days', 'error')
                 return render_template('apply_leave.html')
 
@@ -578,6 +585,8 @@ def approve_leave(leave_id):
             balance.sick_leave_used += days
         elif leave.leave_type == 'annual':
             balance.annual_leave_used += days
+        elif leave.leave_type == 'lwp':
+            balance.lwp_used += days
 
         # Record the debit transaction
         record_leave_transaction(
@@ -707,6 +716,8 @@ def approve_revocation(leave_id):
             balance.sick_leave_used = max(0, balance.sick_leave_used - days)
         elif leave.leave_type == 'annual':
             balance.annual_leave_used = max(0, balance.annual_leave_used - days)
+        elif leave.leave_type == 'lwp':
+            balance.lwp_used = max(0, balance.lwp_used - days)
 
         # Record the credit transaction (restoration)
         record_leave_transaction(
@@ -874,7 +885,8 @@ def leave_stats():
         leave_info = balance.get_available_leave()
         return jsonify({
             'sick': {'accrued': leave_info['sick_accrued'], 'used': leave_info['sick_used'], 'available': leave_info['sick_available']},
-            'annual': {'accrued': leave_info['annual_accrued'], 'used': leave_info['annual_used'], 'available': leave_info['annual_available']}
+            'annual': {'accrued': leave_info['annual_accrued'], 'used': leave_info['annual_used'], 'available': leave_info['annual_available']},
+            'lwp': {'used': leave_info['lwp_used']}
         })
     return jsonify({})
 

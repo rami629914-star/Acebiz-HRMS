@@ -40,6 +40,21 @@
             </div>
         </div>
 
+        <div class="stat-card lwp" style="border-left-color: #f59e0b;">
+            <div class="stat-icon" style="color: #f59e0b;">
+                <i class="fas fa-ban"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Leave Without Pay</h3>
+                {% if leave_info %}
+                <p class="stat-number">{{ leave_info.lwp_used }}</p>
+                <span class="stat-label">total days taken</span>
+                {% else %}
+                <p class="stat-number">0</p>
+                {% endif %}
+            </div>
+        </div>
+
         {% if current_user.role in ['admin', 'manager'] %}
         <div class="stat-card pending">
             <div class="stat-icon">
