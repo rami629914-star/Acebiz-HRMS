@@ -20,37 +20,48 @@
                class="tab {% if leave_type == 'sick' %}active{% endif %}">
                 <i class="fas fa-briefcase-medical"></i> Sick Leave
             </a>
+            <a href="{{ url_for('leave_transactions', type='lwp', year=year) }}"
+               class="tab {% if leave_type == 'lwp' %}active{% endif %}">
+                <i class="fas fa-ban"></i> LWP
+            </a>
         </div>
     </div>
 
     <!-- Summary Card -->
     <div class="summary-cards">
-        <div class="summary-card {% if leave_type == 'annual' %}annual{% else %}sick{% endif %}">
-            <div class="summary-icon">
-                <i class="fas {% if leave_type == 'annual' %}fa-umbrella-beach{% else %}fa-briefcase-medical{% endif %}"></i>
+        <div class="summary-card {% if leave_type == 'annual' %}annual{% elif leave_type == 'sick' %}sick{% endif %}" {% if leave_type == 'lwp' %}style="border-left: 4px solid #f59e0b;"{% endif %}>
+            <div class="summary-icon" {% if leave_type == 'lwp' %}style="color: #f59e0b;"{% endif %}>
+                <i class="fas {% if leave_type == 'annual' %}fa-umbrella-beach{% elif leave_type == 'sick' %}fa-briefcase-medical{% else %}fa-ban{% endif %}"></i>
             </div>
             <div class="summary-info">
-                <h3>{{ leave_type|capitalize }} Leave Summary</h3>
+                <h3>{% if leave_type == 'lwp' %}Leave Without Pay{% else %}{{ leave_type|capitalize }} Leave{% endif %} Summary</h3>
                 {% if leave_info %}
                 <div class="summary-stats">
+                    {% if leave_type != 'lwp' %}
                     <div class="stat">
                         <span class="stat-value">
                             {% if leave_type == 'annual' %}{{ leave_info.annual_accrued }}{% else %}{{ leave_info.sick_accrued }}{% endif %}
                         </span>
-                        <span class="stat-label">Total Credited</span>
+                        <span class="stat-label">Total Credited (hrs)</span>
                     </div>
                     <div class="stat">
                         <span class="stat-value text-danger">
                             {% if leave_type == 'annual' %}{{ leave_info.annual_used }}{% else %}{{ leave_info.sick_used }}{% endif %}
                         </span>
-                        <span class="stat-label">Used</span>
+                        <span class="stat-label">Used (hrs)</span>
                     </div>
                     <div class="stat">
                         <span class="stat-value text-success">
                             {% if leave_type == 'annual' %}{{ leave_info.annual_available }}{% else %}{{ leave_info.sick_available }}{% endif %}
                         </span>
-                        <span class="stat-label">Available</span>
+                        <span class="stat-label">Available (hrs)</span>
                     </div>
+                    {% else %}
+                    <div class="stat">
+                        <span class="stat-value text-danger">{{ leave_info.lwp_used }}</span>
+                        <span class="stat-label">Total Hours Taken</span>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -78,7 +89,7 @@
                             <th>Date</th>
                             <th>Description</th>
                             <th>Type</th>
-                            <th>Days</th>
+                            <th>Hours</th>
                             <th>Balance</th>
                         </tr>
                     </thead>
@@ -103,7 +114,7 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="transaction-balance">{{ txn.balance }} days</span>
+                                <span class="transaction-balance">{{ txn.balance }} hrs</span>
                             </td>
                         </tr>
                         {% endfor %}

@@ -41,10 +41,19 @@
                 </div>
             </div>
 
-            <div class="form-group" id="daysCount" style="display: none;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="hours">
+                        <i class="fas fa-clock"></i> Leave Hours
+                    </label>
+                    <input type="number" id="hours" name="hours" step="0.01" min="0.01" required placeholder="Enter leave hours (e.g. 9.2)">
+                </div>
+            </div>
+
+            <div class="form-group" id="daysInfo" style="display: none;">
                 <div class="info-box">
                     <i class="fas fa-info-circle"></i>
-                    <span>Total days: <strong id="totalDays">0</strong></span>
+                    <span>Duration: <strong id="totalDays">0</strong> day(s) | Hours: <strong id="displayHours">0</strong></span>
                 </div>
             </div>
 
@@ -72,15 +81,17 @@
 <script>
     const startDate = document.getElementById('start_date');
     const endDate = document.getElementById('end_date');
-    const daysCount = document.getElementById('daysCount');
+    const hoursInput = document.getElementById('hours');
+    const daysInfo = document.getElementById('daysInfo');
     const totalDays = document.getElementById('totalDays');
+    const displayHours = document.getElementById('displayHours');
 
     // Set minimum date to today
     const today = new Date().toISOString().split('T')[0];
     startDate.setAttribute('min', today);
     endDate.setAttribute('min', today);
 
-    function calculateDays() {
+    function updateInfo() {
         if (startDate.value && endDate.value) {
             const start = new Date(startDate.value);
             const end = new Date(endDate.value);
@@ -89,18 +100,23 @@
 
             if (diffDays > 0) {
                 totalDays.textContent = diffDays;
-                daysCount.style.display = 'block';
+                displayHours.textContent = hoursInput.value || '0';
+                daysInfo.style.display = 'block';
             } else {
-                daysCount.style.display = 'none';
+                daysInfo.style.display = 'none';
             }
         }
     }
 
     startDate.addEventListener('change', function() {
         endDate.setAttribute('min', this.value);
-        calculateDays();
+        updateInfo();
     });
 
-    endDate.addEventListener('change', calculateDays);
+    endDate.addEventListener('change', updateInfo);
+    hoursInput.addEventListener('input', function() {
+        displayHours.textContent = this.value || '0';
+        updateInfo();
+    });
 </script>
 {% endblock %}

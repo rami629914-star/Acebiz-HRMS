@@ -11,12 +11,12 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Monthly leave accrual rates
-ANNUAL_LEAVE_MONTHLY_CREDIT = 1.25  # 1.25 days per month (15 days/year)
-SICK_LEAVE_MONTHLY_CREDIT = 1.0     # 1 day per month (12 days/year)
+# Monthly leave accrual rates (in HOURS)
+ANNUAL_LEAVE_MONTHLY_CREDIT = 9.2    # 9.2 hours per month (110.4 hours/year)
+SICK_LEAVE_MONTHLY_CREDIT = 7.36     # 7.36 hours per month (88.32 hours/year)
 
 def get_accrued_leave(month=None):
-    """Calculate accrued leave based on current month (1-12)"""
+    """Calculate accrued leave hours based on current month (1-12)"""
     if month is None:
         month = datetime.now().month
     return {
@@ -86,6 +86,7 @@ class Leave(db.Model):
     leave_type = db.Column(db.String(50), nullable=False)  # sick, annual, lwp
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
+    hours = db.Column(db.Float, nullable=False, default=0)  # leave hours requested
     reason = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected, revoked
     applied_on = db.Column(db.DateTime, default=datetime.utcnow)
@@ -501,14 +502,16 @@ def apply_leave():
         leave_type = request.form.get('leave_type')
         start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
         end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d').date()
+        hours = float(request.form.get('hours', 0))
         reason = request.form.get('reason')
 
         if end_date < start_date:
             flash('End date cannot be before start date', 'error')
             return render_template('apply_leave.html')
 
-        # Calculate number of days
-        days = (end_date - start_date).days + 1
+        if hours <= 0:
+            flash('Please enter valid leave hours', 'error')
+            return render_template('apply_leave.html')
 
         # Check leave balance
         balance = LeaveBalance.query.filter_by(
@@ -525,8 +528,8 @@ def apply_leave():
             elif leave_type == 'annual':
                 available = leave_info['annual_available']
 
-            if days > available:
-                flash(f'Insufficient leave balance. Available: {available} days', 'error')
+            if hours > available:
+                flash(f'Insufficient leave balance. Available: {available} hours', 'error')
                 return render_template('apply_leave.html')
 
         leave = Leave(
@@ -534,6 +537,7 @@ def apply_leave():
             leave_type=leave_type,
             start_date=start_date,
             end_date=end_date,
+            hours=hours,
             reason=reason
         )
         db.session.add(leave)
@@ -546,7 +550,7 @@ def apply_leave():
             'leave_type': leave_type,
             'start_date': str(start_date),
             'end_date': str(end_date),
-            'days': days,
+            'hours': hours,
             'reason': reason,
             'department': current_user.department
         })
@@ -590,8 +594,8 @@ def approve_leave(leave_id):
     leave.reviewed_on = datetime.utcnow()
     leave.comments = comments
 
-    # Update leave balance
-    days = (leave.end_date - leave.start_date).days + 1
+    # Update leave balance (hours)
+    hours = leave.hours
     balance = LeaveBalance.query.filter_by(
         user_id=leave.user_id,
         year=datetime.now().year
@@ -599,19 +603,19 @@ def approve_leave(leave_id):
 
     if balance:
         if leave.leave_type == 'sick':
-            balance.sick_leave_used += days
+            balance.sick_leave_used += hours
         elif leave.leave_type == 'annual':
-            balance.annual_leave_used += days
+            balance.annual_leave_used += hours
         elif leave.leave_type == 'lwp':
-            balance.lwp_used += days
+            balance.lwp_used += hours
 
         # Record the debit transaction
         record_leave_transaction(
             user_id=leave.user_id,
             leave_type=leave.leave_type,
             transaction_type='debit',
-            days=days,
-            description=f'Leave taken ({leave.start_date.strftime("%d %b")} - {leave.end_date.strftime("%d %b, %Y")})',
+            days=hours,
+            description=f'Leave taken ({leave.start_date.strftime("%d %b")} - {leave.end_date.strftime("%d %b, %Y")}) - {hours} hrs',
             reference_id=leave.id,
             transaction_date=leave.start_date
         )
@@ -626,7 +630,7 @@ def approve_leave(leave_id):
         'leave_type': leave.leave_type,
         'start_date': str(leave.start_date),
         'end_date': str(leave.end_date),
-        'days': days,
+        'hours': hours,
         'approved_by': current_user.username
     })
 
@@ -719,10 +723,10 @@ def approve_revocation(leave_id):
         flash('No revocation request found.', 'error')
         return redirect(url_for('manage_leaves'))
 
-    # Calculate number of days
-    days = (leave.end_date - leave.start_date).days + 1
+    # Get leave hours
+    hours = leave.hours
 
-    # Restore leave balance
+    # Restore leave balance (hours)
     balance = LeaveBalance.query.filter_by(
         user_id=leave.user_id,
         year=datetime.now().year
@@ -730,19 +734,19 @@ def approve_revocation(leave_id):
 
     if balance:
         if leave.leave_type == 'sick':
-            balance.sick_leave_used = max(0, balance.sick_leave_used - days)
+            balance.sick_leave_used = max(0, balance.sick_leave_used - hours)
         elif leave.leave_type == 'annual':
-            balance.annual_leave_used = max(0, balance.annual_leave_used - days)
+            balance.annual_leave_used = max(0, balance.annual_leave_used - hours)
         elif leave.leave_type == 'lwp':
-            balance.lwp_used = max(0, balance.lwp_used - days)
+            balance.lwp_used = max(0, balance.lwp_used - hours)
 
         # Record the credit transaction (restoration)
         record_leave_transaction(
             user_id=leave.user_id,
             leave_type=leave.leave_type,
             transaction_type='credit',
-            days=days,
-            description=f'Leave revoked - restored ({leave.start_date.strftime("%d %b")} - {leave.end_date.strftime("%d %b, %Y")})',
+            days=hours,
+            description=f'Leave revoked - restored ({leave.start_date.strftime("%d %b")} - {leave.end_date.strftime("%d %b, %Y")}) - {hours} hrs',
             reference_id=leave.id,
             transaction_date=datetime.now().date()
         )
@@ -836,23 +840,24 @@ def leave_transactions():
 
     # Generate monthly credit transactions
     current_month = datetime.now().month if year == datetime.now().year else 12
-    credit_rate = ANNUAL_LEAVE_MONTHLY_CREDIT if leave_type == 'annual' else SICK_LEAVE_MONTHLY_CREDIT
 
     # Build complete transaction list with credits and debits
     transactions = []
     running_balance = 0
 
-    # Add monthly credits
-    for month in range(1, current_month + 1):
-        credit_date = datetime(year, month, 1).date()
-        running_balance += credit_rate
-        transactions.append({
-            'date': credit_date,
-            'type': 'credit',
-            'days': credit_rate,
-            'description': f'Monthly credit for {credit_date.strftime("%B %Y")}',
-            'balance': round(running_balance, 2)
-        })
+    # Add monthly credits (LWP has no credits)
+    if leave_type in ['annual', 'sick']:
+        credit_rate = ANNUAL_LEAVE_MONTHLY_CREDIT if leave_type == 'annual' else SICK_LEAVE_MONTHLY_CREDIT
+        for month in range(1, current_month + 1):
+            credit_date = datetime(year, month, 1).date()
+            running_balance += credit_rate
+            transactions.append({
+                'date': credit_date,
+                'type': 'credit',
+                'days': credit_rate,
+                'description': f'Monthly credit for {credit_date.strftime("%B %Y")}',
+                'balance': round(running_balance, 2)
+            })
 
     # Add debits from database
     for txn in db_transactions:
@@ -911,13 +916,21 @@ def init_db():
     with app.app_context():
         db.create_all()
 
-        # Add lwp_used column if it doesn't exist (migration for existing databases)
+        # Database migrations for existing databases
         try:
             from sqlalchemy import inspect, text
             inspector = inspect(db.engine)
-            columns = [col['name'] for col in inspector.get_columns('leave_balance')]
-            if 'lwp_used' not in columns:
+
+            # Add lwp_used column to leave_balance if missing
+            lb_columns = [col['name'] for col in inspector.get_columns('leave_balance')]
+            if 'lwp_used' not in lb_columns:
                 db.session.execute(text('ALTER TABLE leave_balance ADD COLUMN lwp_used FLOAT DEFAULT 0'))
+                db.session.commit()
+
+            # Add hours column to leave table if missing
+            leave_columns = [col['name'] for col in inspector.get_columns('leave')]
+            if 'hours' not in leave_columns:
+                db.session.execute(text('ALTER TABLE leave ADD COLUMN hours FLOAT DEFAULT 0'))
                 db.session.commit()
         except Exception:
             pass

@@ -18,7 +18,7 @@
                 <h3>Annual Leave</h3>
                 {% if leave_info %}
                 <p class="stat-number">{{ leave_info.annual_available }}</p>
-                <span class="stat-label">of {{ leave_info.annual_accrued }} accrued days</span>
+                <span class="stat-label">of {{ leave_info.annual_accrued }} accrued hrs</span>
                 {% else %}
                 <p class="stat-number">--</p>
                 {% endif %}
@@ -33,7 +33,7 @@
                 <h3>Sick Leave</h3>
                 {% if leave_info %}
                 <p class="stat-number">{{ leave_info.sick_available }}</p>
-                <span class="stat-label">of {{ leave_info.sick_accrued }} accrued days</span>
+                <span class="stat-label">of {{ leave_info.sick_accrued }} accrued hrs</span>
                 {% else %}
                 <p class="stat-number">--</p>
                 {% endif %}
@@ -48,7 +48,7 @@
                 <h3>Leave Without Pay</h3>
                 {% if leave_info %}
                 <p class="stat-number">{{ leave_info.lwp_used }}</p>
-                <span class="stat-label">total days taken</span>
+                <span class="stat-label">total hours taken</span>
                 {% else %}
                 <p class="stat-number">0</p>
                 {% endif %}

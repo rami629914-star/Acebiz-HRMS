@@ -21,7 +21,7 @@
                             <th>Leave Type</th>
                             <th>Start Date</th>
                             <th>End Date</th>
-                            <th>Days</th>
+                            <th>Hours</th>
                             <th>Reason</th>
                             <th>Status</th>
                             <th>Applied On</th>
@@ -38,7 +38,7 @@
                             </td>
                             <td>{{ leave.start_date.strftime('%d %b, %Y') }}</td>
                             <td>{{ leave.end_date.strftime('%d %b, %Y') }}</td>
-                            <td>{{ (leave.end_date - leave.start_date).days + 1 }}</td>
+                            <td>{{ leave.hours }} hrs</td>
                             <td class="reason-cell">
                                 <span class="reason-text" title="{{ leave.reason }}">
                                     {{ leave.reason[:50] }}{% if leave.reason|length > 50 %}...{% endif %}
