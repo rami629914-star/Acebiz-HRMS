@@ -43,17 +43,38 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="hours">
-                        <i class="fas fa-clock"></i> Leave Hours
+                    <label for="duration_type">
+                        <i class="fas fa-clock"></i> Duration Type
                     </label>
-                    <input type="number" id="hours" name="hours" step="0.01" min="0.01" required placeholder="Enter leave hours (e.g. 9.2)">
+                    <select id="duration_type" required>
+                        <option value="">Select Duration</option>
+                        <option value="full_day">Full Day (7.36 hrs)</option>
+                        <option value="half_day">Half Day (3.68 hrs)</option>
+                        <option value="custom">Custom Hours</option>
+                    </select>
                 </div>
             </div>
+
+            <div class="form-row" id="customHoursRow" style="display: none;">
+                <div class="form-group">
+                    <label for="custom_hours">
+                        <i class="fas fa-hourglass-half"></i> Enter Hours
+                    </label>
+                    <input type="number" id="custom_hours" step="0.01" min="0.01" max="7.36" placeholder="e.g. 2, 3, 4.5">
+                </div>
+            </div>
+
+            <!-- Hidden field that actually submits -->
+            <input type="hidden" id="hours" name="hours" value="0">
 
             <div class="form-group" id="daysInfo" style="display: none;">
                 <div class="info-box">
                     <i class="fas fa-info-circle"></i>
-                    <span>Duration: <strong id="totalDays">0</strong> day(s) | Hours: <strong id="displayHours">0</strong></span>
+                    <span>
+                        Duration: <strong id="totalDays">0</strong> day(s) |
+                        Hours per day: <strong id="hoursPerDay">0</strong> |
+                        Total Hours: <strong id="displayHours">0</strong>
+                    </span>
                 </div>
             </div>
 
@@ -79,11 +100,16 @@
 
 {% block scripts %}
 <script>
+    const HOURS_PER_DAY = 7.36;
     const startDate = document.getElementById('start_date');
     const endDate = document.getElementById('end_date');
-    const hoursInput = document.getElementById('hours');
+    const durationType = document.getElementById('duration_type');
+    const customHoursRow = document.getElementById('customHoursRow');
+    const customHours = document.getElementById('custom_hours');
+    const hiddenHours = document.getElementById('hours');
     const daysInfo = document.getElementById('daysInfo');
     const totalDays = document.getElementById('totalDays');
+    const hoursPerDay = document.getElementById('hoursPerDay');
     const displayHours = document.getElementById('displayHours');
 
     // Set minimum date to today
@@ -91,32 +117,80 @@
     startDate.setAttribute('min', today);
     endDate.setAttribute('min', today);
 
-    function updateInfo() {
+    function getDays() {
         if (startDate.value && endDate.value) {
             const start = new Date(startDate.value);
             const end = new Date(endDate.value);
             const diffTime = end - start;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            return days > 0 ? days : 0;
+        }
+        return 0;
+    }
 
-            if (diffDays > 0) {
-                totalDays.textContent = diffDays;
-                displayHours.textContent = hoursInput.value || '0';
-                daysInfo.style.display = 'block';
-            } else {
-                daysInfo.style.display = 'none';
-            }
+    function calculateHours() {
+        const days = getDays();
+        const type = durationType.value;
+        let hrsPerDay = 0;
+        let total = 0;
+
+        if (type === 'full_day') {
+            hrsPerDay = HOURS_PER_DAY;
+            total = days * HOURS_PER_DAY;
+        } else if (type === 'half_day') {
+            hrsPerDay = HOURS_PER_DAY / 2;
+            total = days * (HOURS_PER_DAY / 2);
+        } else if (type === 'custom') {
+            hrsPerDay = parseFloat(customHours.value) || 0;
+            total = days * hrsPerDay;
+        }
+
+        total = Math.round(total * 100) / 100;
+        hiddenHours.value = total;
+
+        if (days > 0 && type) {
+            totalDays.textContent = days;
+            hoursPerDay.textContent = hrsPerDay.toFixed(2) + ' hrs';
+            displayHours.textContent = total.toFixed(2) + ' hrs';
+            daysInfo.style.display = 'block';
+        } else {
+            daysInfo.style.display = 'none';
         }
     }
 
-    startDate.addEventListener('change', function() {
-        endDate.setAttribute('min', this.value);
-        updateInfo();
+    durationType.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customHoursRow.style.display = 'flex';
+            customHours.setAttribute('required', 'required');
+        } else {
+            customHoursRow.style.display = 'none';
+            customHours.removeAttribute('required');
+            customHours.value = '';
+        }
+        calculateHours();
     });
 
-    endDate.addEventListener('change', updateInfo);
-    hoursInput.addEventListener('input', function() {
-        displayHours.textContent = this.value || '0';
-        updateInfo();
+    startDate.addEventListener('change', function() {
+        endDate.setAttribute('min', this.value);
+        calculateHours();
+    });
+
+    endDate.addEventListener('change', calculateHours);
+    customHours.addEventListener('input', calculateHours);
+
+    // Form validation
+    document.getElementById('leaveForm').addEventListener('submit', function(e) {
+        const total = parseFloat(hiddenHours.value);
+        if (!durationType.value) {
+            e.preventDefault();
+            alert('Please select a duration type');
+            return;
+        }
+        if (total <= 0) {
+            e.preventDefault();
+            alert('Please fill in dates and duration correctly');
+            return;
+        }
     });
 </script>
 {% endblock %}
