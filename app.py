@@ -16,12 +16,14 @@ ANNUAL_LEAVE_MONTHLY_CREDIT = 9.2    # 9.2 hours per month (110.4 hours/year)
 SICK_LEAVE_MONTHLY_CREDIT = 7.36     # 7.36 hours per month (88.32 hours/year)
 
 def get_accrued_leave(month=None):
-    """Calculate accrued leave hours based on current month (1-12)"""
+    """Calculate accrued leave hours based on current month (credits start from February)"""
     if month is None:
         month = datetime.now().month
+    # Credits start from February, so Jan=0 months, Feb=1 month, Mar=2 months, etc.
+    months_accrued = max(0, month - 1)
     return {
-        'annual': round(month * ANNUAL_LEAVE_MONTHLY_CREDIT, 2),
-        'sick': round(month * SICK_LEAVE_MONTHLY_CREDIT, 2)
+        'annual': round(months_accrued * ANNUAL_LEAVE_MONTHLY_CREDIT, 2),
+        'sick': round(months_accrued * SICK_LEAVE_MONTHLY_CREDIT, 2)
     }
 
 # Database URI: Use PostgreSQL (Neon) if DATABASE_URL is set, else SQLite for local
@@ -848,7 +850,7 @@ def leave_transactions():
     # Add monthly credits (LWP has no credits)
     if leave_type in ['annual', 'sick']:
         credit_rate = ANNUAL_LEAVE_MONTHLY_CREDIT if leave_type == 'annual' else SICK_LEAVE_MONTHLY_CREDIT
-        for month in range(1, current_month + 1):
+        for month in range(2, current_month + 1):  # Credits start from February
             credit_date = datetime(year, month, 1).date()
             running_balance += credit_rate
             transactions.append({
