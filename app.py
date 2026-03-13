@@ -545,6 +545,9 @@ def apply_leave():
         db.session.add(leave)
         db.session.commit()
 
+        # Calculate days count
+        days_count = (end_date - start_date).days + 1
+
         # Send n8n webhook for email notification
         send_n8n_webhook('leave_applied', {
             'employee_name': current_user.username,
@@ -553,6 +556,7 @@ def apply_leave():
             'start_date': str(start_date),
             'end_date': str(end_date),
             'hours': hours,
+            'days': f'{hours} hrs ({days_count} day{"s" if days_count > 1 else ""})',
             'reason': reason,
             'department': current_user.department
         })
@@ -626,6 +630,7 @@ def approve_leave(leave_id):
 
     # Notify employee via n8n
     employee = User.query.get(leave.user_id)
+    days_count = (leave.end_date - leave.start_date).days + 1
     send_n8n_webhook('leave_approved', {
         'employee_name': employee.username,
         'employee_email': employee.email,
@@ -633,6 +638,7 @@ def approve_leave(leave_id):
         'start_date': str(leave.start_date),
         'end_date': str(leave.end_date),
         'hours': hours,
+        'days': f'{hours} hrs ({days_count} day{"s" if days_count > 1 else ""})',
         'approved_by': current_user.username
     })
 
@@ -655,12 +661,15 @@ def reject_leave(leave_id):
 
     # Notify employee via n8n
     employee = User.query.get(leave.user_id)
+    days_count = (leave.end_date - leave.start_date).days + 1
     send_n8n_webhook('leave_rejected', {
         'employee_name': employee.username,
         'employee_email': employee.email,
         'leave_type': leave.leave_type,
         'start_date': str(leave.start_date),
         'end_date': str(leave.end_date),
+        'hours': leave.hours,
+        'days': f'{leave.hours} hrs ({days_count} day{"s" if days_count > 1 else ""})',
         'reason': comments,
         'rejected_by': current_user.username
     })
